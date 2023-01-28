@@ -1,7 +1,7 @@
 mod command_parser;
 mod data_store;
 mod server;
-use std::thread;
+// use std::thread;
 use std::time::Duration;
 mod client;
 
@@ -16,9 +16,6 @@ lazy_static! {
 }
 fn main() {
     sleep(Duration::from_secs(1));
-    thread::spawn(|| client::send());
+    // thread::spawn(|| client::send());
     server::listen();
-    // let mut store = data_store::DataStore::new();
-    // // let s = store.get_key("there");
-    // store.add_key("new val", "this is a new val");
 }

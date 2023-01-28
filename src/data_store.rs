@@ -38,7 +38,6 @@ impl DataStore {
             .expect("error while handling file");
 
         for (key, value) in store.iter() {
-            println!("{}.{}", key, value);
             file.write(format!("{}.{}\n", key, value).as_bytes())
                 .expect("error while writing to file");
         }

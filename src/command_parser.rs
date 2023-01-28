@@ -1,4 +1,3 @@
-use std::net::TcpStream;
 #[derive(Debug)]
 pub struct Command {
     pub name: CommandType,
@@ -7,8 +6,8 @@ pub struct Command {
 }
 #[derive(Debug)]
 pub enum CommandType {
-    Set, // [key, byte_size, value]
-    Get, // stores key
+    Set,
+    Get,
 }
 
 fn parse_set(cmd: &String) -> Command {
@@ -44,14 +43,5 @@ pub fn parse(cmd: &String) -> Command {
         return parse_get(&cmd);
     } else {
         panic!("Unsupported command entered: {}", command)
-    }
-}
-
-impl Command {
-    fn send_response(&self, stream: TcpStream) {
-        match self.name {
-            CommandType::Set => println!("set"),
-            CommandType::Get => println!("get"),
-        }
     }
 }
