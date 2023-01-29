@@ -1,47 +1,63 @@
+use super::COMMANDS;
+use std::result::Result;
+use std::str::Split;
+
 #[derive(Debug)]
 pub struct Command {
     pub name: CommandType,
     pub values: Vec<String>,
     // flags: HashMap<Flags, String>,
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum CommandType {
     Set,
     Get,
+    Add,
+    Replace,
+    Append,
+    Prepend,
+    Delete,
+    // FlushAll,
+}
+pub enum Error {
+    CmdErr,
+    ValueErr,
+    KeyErr,
 }
 
-fn parse_set(cmd: &String) -> Command {
-    let mut splitted = cmd.split("\r\n");
-    let v = String::from(splitted.next().expect("error while parsing"));
-    let mut vals = v.split(" ");
-    vals.next(); // skip set cmd
-    return Command {
-        name: CommandType::Set,
-        values: vec![
-            String::from(vals.next().unwrap()),
-            String::from(vals.next().unwrap()),
-            String::from(splitted.next().unwrap().trim()),
-        ],
-    };
+fn try_parse(
+    cmd_type: CommandType,
+    cmd: &mut Split<&str>,
+    val: &mut Split<&str>,
+) -> Result<Command, Error> {
+    let mut v: Vec<String> = Vec::new();
+
+    for i in cmd {
+        v.push(i.to_string());
+    }
+    for i in val {
+        v.push(i.to_string());
+    }
+
+    if v.len() > 0 {
+        return Ok(Command {
+            name: cmd_type,
+            values: v,
+        });
+    }
+
+    return Err(Error::CmdErr);
 }
 
-fn parse_get(cmd: &String) -> Command {
-    let mut splitted = cmd.split_whitespace();
-    splitted.next();
-    return Command {
-        name: CommandType::Get,
-        values: vec![String::from(splitted.next().unwrap().trim())],
-    };
-}
+pub fn parse_cmd(cmd: &str) -> Result<Command, Error> {
+    let mut command = cmd.trim().split("\r\n");
+    let mut proto = command.next().unwrap().split(" ");
 
-pub fn parse(cmd: &String) -> Command {
-    let mut command = cmd.trim();
-    command = &command[0..3];
-    if command == "set" {
-        return parse_set(&cmd);
-    } else if command == "get" {
-        return parse_get(&cmd);
-    } else {
-        panic!("Unsupported command entered: {}", command)
+    match proto.next() {
+        Some(val) => match COMMANDS.get(val) {
+            Some(t) => try_parse(t.clone(), &mut proto, &mut command),
+            None => Err(Error::CmdErr),
+        },
+        None => Err(Error::CmdErr),
     }
 }
