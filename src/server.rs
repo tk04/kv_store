@@ -1,13 +1,14 @@
-use crate::command_parser::{parse_cmd, Command, CommandType};
+use crate::command_parser::{parse_cmd, Command, CommandType, Response};
 use crate::DATA_STORE;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::str::FromStr;
+use std::thread;
 
 pub fn listen() {
     let listener = TcpListener::bind("127.0.0.1:6000").unwrap();
     for stream in listener.incoming() {
-        handler(&mut stream.unwrap());
+        thread::spawn(|| handler(&mut stream.unwrap()));
     }
 }
 
@@ -20,6 +21,7 @@ fn match_cmd(cmd: Command) -> String {
         CommandType::Append => append_res(cmd),
         CommandType::Delete => delete_res(cmd),
         CommandType::Replace => replace_res(cmd),
+        CommandType::FlushAll => flush_all_res(),
     }
 }
 fn handler(stream: &mut TcpStream) {
@@ -34,11 +36,11 @@ fn handler(stream: &mut TcpStream) {
             stream
                 .write(match_cmd(val).as_bytes())
                 .expect("socket error");
-            return ();
         }
         Err(_) => {
-            stream.write(b"CommandError\r\n").expect("socket error");
-            return ();
+            stream
+                .write(Response::Error.to_string().as_bytes())
+                .expect("socket error");
         }
     }
 }
@@ -60,83 +62,89 @@ fn valid_value(cmd: &Command) -> bool {
 }
 fn set_res(cmd: Command) -> String {
     if !valid_value(&cmd) {
-        return "ValueErr\r\n".to_string();
+        return Response::Error.to_string();
     }
 
     let mut ds = DATA_STORE.lock().unwrap();
     ds.set_key(&cmd.values[0], &cmd.values[2]);
 
-    return "Stored\r\n".to_string();
+    return Response::Stored.to_string();
 }
 
 fn get_res(cmd: Command) -> String {
-    if cmd.values.len() < 0 {
-        return "KeyErr\r\n".to_string();
+    if cmd.values.len() == 0 {
+        return Response::Error.to_string();
     }
 
-    let mut ds = DATA_STORE.lock().unwrap();
+    let ds = DATA_STORE.lock().unwrap();
     match ds.get_key(&cmd.values[0]) {
         Some(val) => {
             return format!(
-                "Value {} {} \r\n{val}\r\nEnd\r\n",
+                "VALUE {} {} \r\n{val}\r\nEND\r\n",
                 cmd.values[0],
                 val.as_bytes().len()
             );
         }
-        None => "KeyErr\r\n".to_string(),
+        None => Response::NotFound.to_string(),
     }
 }
 fn append_res(cmd: Command) -> String {
     if !valid_value(&cmd) {
-        return "ValueErr\r\n".to_string();
+        return Response::Error.to_string();
     }
     let mut ds = DATA_STORE.lock().unwrap();
     if ds.append_key(&cmd.values[0], &cmd.values[2]) {
-        return "STORED\r\n".to_string();
+        return Response::Stored.to_string();
     }
-    return "NOT_STORED\r\n".to_string();
+    return Response::NotStored.to_string();
 }
 fn prepend_res(cmd: Command) -> String {
     if !valid_value(&cmd) {
-        return "ValueErr\r\n".to_string();
+        return Response::Error.to_string();
     }
     let mut ds = DATA_STORE.lock().unwrap();
-    if ds.append_key(&cmd.values[0], &cmd.values[2]) {
-        return "STORED\r\n".to_string();
+    if ds.prepend_key(&cmd.values[0], &cmd.values[2]) {
+        return Response::Stored.to_string();
     }
-    return "NOT_STORED\r\n".to_string();
+    return Response::NotStored.to_string();
 }
 
 fn add_res(cmd: Command) -> String {
     if !valid_value(&cmd) {
-        return "ValueErr\r\n".to_string();
+        return Response::Error.to_string();
     }
     let mut ds = DATA_STORE.lock().unwrap();
 
     if !ds.has_key(&cmd.values[0]) {
         ds.set_key(&cmd.values[0], &cmd.values[2]);
-        return "STORED\r\n".to_string();
+        return Response::Stored.to_string();
     }
-    return "NOT_STORED\r\n".to_string();
+    return Response::NotStored.to_string();
 }
 fn delete_res(cmd: Command) -> String {
-    if cmd.values.len() < 0 {
-        return "KeyErr\r\n".to_string();
+    if cmd.values.len() == 0 {
+        return Response::Error.to_string();
     }
     let mut ds = DATA_STORE.lock().unwrap();
     if ds.delete_key(&cmd.values[0]) {
-        return "DELETED\r\n".to_string();
+        return Response::Deleted.to_string();
     }
-    return "NOT_FOUND\r\n".to_string();
+    return Response::NotFound.to_string();
 }
 fn replace_res(cmd: Command) -> String {
     if !valid_value(&cmd) {
-        return "ValueErr\r\n".to_string();
+        return Response::Error.to_string();
     }
     let mut ds = DATA_STORE.lock().unwrap();
     if ds.has_key(&cmd.values[0]) {
         ds.set_key(&cmd.values[0], &cmd.values[2]);
-        return "STORED\r\n".to_string();
+        return Response::Stored.to_string();
     }
-    return "NOT_FOUND\r\n".to_string();
+    return Response::NotFound.to_string();
+}
+
+fn flush_all_res() -> String {
+    let mut ds = DATA_STORE.lock().unwrap();
+    ds.delete_all();
+    return Response::Ok.to_string();
 }

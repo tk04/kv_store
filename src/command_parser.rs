@@ -17,19 +17,34 @@ pub enum CommandType {
     Append,
     Prepend,
     Delete,
-    // FlushAll,
+    FlushAll,
 }
-pub enum Error {
-    CmdErr,
-    ValueErr,
-    KeyErr,
+pub enum Response {
+    Stored,
+    NotStored,
+    NotFound,
+    Error,
+    Deleted,
+    Ok,
+}
+impl Response {
+    pub fn to_string(&self) -> String {
+        match self {
+            Response::Stored => "STORED\r\n".to_string(),
+            Response::NotStored => "NOT_STORED\r\n".to_string(),
+            Response::NotFound => "NOT_FOUND\r\n".to_string(),
+            Response::Error => "ERROR\r\n".to_string(),
+            Response::Deleted => "DELETED\r\n".to_string(),
+            Response::Ok => "OK\r\n".to_string(),
+        }
+    }
 }
 
 fn try_parse(
     cmd_type: CommandType,
     cmd: &mut Split<&str>,
     val: &mut Split<&str>,
-) -> Result<Command, Error> {
+) -> Result<Command, String> {
     let mut v: Vec<String> = Vec::new();
 
     for i in cmd {
@@ -38,26 +53,33 @@ fn try_parse(
     for i in val {
         v.push(i.to_string());
     }
-
-    if v.len() > 0 {
-        return Ok(Command {
+    match cmd_type {
+        CommandType::FlushAll => Ok(Command {
             name: cmd_type,
             values: v,
-        });
-    }
+        }),
+        _ => {
+            if v.len() > 0 {
+                return Ok(Command {
+                    name: cmd_type,
+                    values: v,
+                });
+            }
 
-    return Err(Error::CmdErr);
+            return Err("Parsing Error".to_string());
+        }
+    }
 }
 
-pub fn parse_cmd(cmd: &str) -> Result<Command, Error> {
+pub fn parse_cmd(cmd: &str) -> Result<Command, String> {
     let mut command = cmd.trim().split("\r\n");
     let mut proto = command.next().unwrap().split(" ");
 
     match proto.next() {
         Some(val) => match COMMANDS.get(val) {
             Some(t) => try_parse(t.clone(), &mut proto, &mut command),
-            None => Err(Error::CmdErr),
+            None => Err("Parsing Error".to_string()),
         },
-        None => Err(Error::CmdErr),
+        None => Err("Parsing Error".to_string()),
     }
 }

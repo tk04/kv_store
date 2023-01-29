@@ -3,13 +3,13 @@ use command_parser::CommandType;
 mod data_store;
 mod server;
 // use std::thread;
-use std::time::Duration;
+// use std::time::Duration;
 mod client;
 
 use lazy_static::lazy_static;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Mutex;
-use std::thread::sleep;
+// use std::thread::sleep;
 
 lazy_static! {
     static ref VALUES: HashMap<String, String> = HashMap::new();
@@ -23,6 +23,7 @@ lazy_static! {
         m.insert("replace", CommandType::Replace);
         m.insert("prepend", CommandType::Prepend);
         m.insert("delete", CommandType::Delete);
+        m.insert("flush_all", CommandType::FlushAll);
         m
     };
 }
