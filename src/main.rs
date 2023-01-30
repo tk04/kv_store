@@ -2,7 +2,7 @@ mod command_parser;
 use command_parser::CommandType;
 mod data_store;
 mod server;
-// use std::thread;
+use std::thread;
 // use std::time::Duration;
 mod client;
 

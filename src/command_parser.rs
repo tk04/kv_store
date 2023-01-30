@@ -6,7 +6,7 @@ use std::str::Split;
 pub struct Command {
     pub name: CommandType,
     pub values: Vec<String>,
-    // flags: HashMap<Flags, String>,
+    pub reply: bool, // flags: HashMap<Flags, String>,
 }
 #[derive(Debug, Clone)]
 pub enum CommandType {
@@ -25,6 +25,7 @@ pub enum Response {
     NotFound,
     Error,
     Deleted,
+    ClientError,
     Ok,
 }
 impl Response {
@@ -36,6 +37,7 @@ impl Response {
             Response::Error => "ERROR\r\n".to_string(),
             Response::Deleted => "DELETED\r\n".to_string(),
             Response::Ok => "OK\r\n".to_string(),
+            Response::ClientError => "CLIENT_ERROR\r\n".to_string(),
         }
     }
 }
@@ -50,6 +52,11 @@ fn try_parse(
     for i in cmd {
         v.push(i.to_string());
     }
+    let mut reply = true;
+    if v[v.len() - 1] == "noreply" {
+        reply = false;
+        v.pop();
+    }
     for i in val {
         v.push(i.to_string());
     }
@@ -57,12 +64,14 @@ fn try_parse(
         CommandType::FlushAll => Ok(Command {
             name: cmd_type,
             values: v,
+            reply,
         }),
         _ => {
             if v.len() > 0 {
                 return Ok(Command {
                     name: cmd_type,
                     values: v,
+                    reply,
                 });
             }
 
