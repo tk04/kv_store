@@ -26,27 +26,26 @@ fn parse_value(val: &str) -> Option<Value> {
     if let Some(idx) = val.find(" ") {
         match u32::from_str(&val[0..idx]) {
             Ok(num) => {
-                let mut exp: u64 = 0;
                 // let mut flags;
                 let second_idx = val[idx + 1..].find(" ").expect("PARSING ERROR") + idx;
                 match u64::from_str(&val[idx + 1..second_idx + 1]) {
-                    Ok(num) => {
-                        exp = num;
+                    Ok(int) => {
+                        let mut exp: u64 = 0;
+                        if int != 0 {
+                            exp = SystemTime::now()
+                                .duration_since(SystemTime::UNIX_EPOCH)
+                                .unwrap()
+                                .as_secs()
+                                + Duration::from_secs(exp).as_secs()
+                        }
+                        return Some(Value {
+                            value: val[second_idx + 1..].to_string(),
+                            exp,
+                            flags: num,
+                        });
                     }
                     Err(_) => return None,
                 }
-                if exp != 0 {
-                    exp = SystemTime::now()
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs()
-                        + Duration::from_secs(exp).as_secs()
-                }
-                return Some(Value {
-                    value: val[second_idx + 1..].to_string(),
-                    exp,
-                    flags: num,
-                });
             }
             Err(_) => None,
         }

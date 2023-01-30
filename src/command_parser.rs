@@ -2,7 +2,7 @@ use super::COMMANDS;
 use std::result::Result;
 use std::str::Split;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Command {
     pub name: CommandType,
     pub values: Vec<String>,
@@ -22,10 +22,10 @@ pub enum CommandType {
 pub enum Response {
     Stored,
     NotStored,
-    NotFound,
+    // NotFound,
     Error,
     Deleted,
-    ClientError,
+    ClientError(String),
     Ok,
 }
 impl Response {
@@ -33,11 +33,11 @@ impl Response {
         match self {
             Response::Stored => "STORED\r\n".to_string(),
             Response::NotStored => "NOT_STORED\r\n".to_string(),
-            Response::NotFound => "NOT_FOUND\r\n".to_string(),
+            // Response::NotFound => "NOT_FOUND\r\n".to_string(),
             Response::Error => "ERROR\r\n".to_string(),
             Response::Deleted => "DELETED\r\n".to_string(),
             Response::Ok => "OK\r\n".to_string(),
-            Response::ClientError => "CLIENT_ERROR\r\n".to_string(),
+            Response::ClientError(val) => format!("CLIENT_ERROR {val}\r\n"),
         }
     }
 }
@@ -46,7 +46,7 @@ fn try_parse(
     cmd_type: CommandType,
     cmd: &mut Split<&str>,
     val: &mut Split<&str>,
-) -> Result<Command, String> {
+) -> Result<Command, Response> {
     let mut v: Vec<String> = Vec::new();
 
     for i in cmd {
@@ -75,20 +75,20 @@ fn try_parse(
                 });
             }
 
-            return Err("Parsing Error".to_string());
+            return Err(Response::ClientError("Unsupported Syntax".to_string()));
         }
     }
 }
 
-pub fn parse_cmd(cmd: &str) -> Result<Command, String> {
+pub fn parse_cmd(cmd: &str) -> Result<Command, Response> {
     let mut command = cmd.trim().split("\r\n");
     let mut proto = command.next().unwrap().split(" ");
 
     match proto.next() {
         Some(val) => match COMMANDS.get(val) {
             Some(t) => try_parse(t.clone(), &mut proto, &mut command),
-            None => Err("Parsing Error".to_string()),
+            None => Err(Response::Error),
         },
-        None => Err("Parsing Error".to_string()),
+        None => Err(Response::ClientError("Syntax Error".to_string())),
     }
 }

@@ -11,13 +11,11 @@ pub fn listen() {
     let listener = TcpListener::bind("127.0.0.1:6000").unwrap();
 
     for stream in listener.incoming() {
-        println!("NEW CONNECTTION");
         thread::spawn(|| handler(&mut stream.unwrap()));
-        // handler(&mut stream.unwrap());
     }
 }
 
-fn match_cmd(cmd: Command) -> String {
+fn match_cmd(cmd: &Command) -> String {
     match cmd.name {
         CommandType::Set => set_res(cmd),
         CommandType::Get => get_res(cmd),
@@ -42,8 +40,11 @@ fn handler(stream: &mut TcpStream) {
         let typed = parse_cmd(&String::from_utf8(rec).unwrap());
         match typed {
             Ok(val) => {
-                ss.write(match_cmd(val).as_bytes()).expect("socket error");
-                ss.flush().expect("error sending message");
+                let response = match_cmd(&val);
+                if val.reply {
+                    ss.write(response.as_bytes()).expect("socket error");
+                    ss.flush().expect("error sending message");
+                }
             }
             Err(_) => {
                 ss.write(Response::Error.to_string().as_bytes())
@@ -65,7 +66,7 @@ fn valid_value(cmd: &Command) -> Result<Value, Response> {
     match bytes {
         Ok(val) => {
             if cmd.values[4].as_bytes().len() != val {
-                return Err(Response::ClientError);
+                return Err(Response::ClientError("Wrong Bytes".to_string()));
             }
             match (flags, exp) {
                 (Ok(val1), Ok(val2)) => {
@@ -79,17 +80,17 @@ fn valid_value(cmd: &Command) -> Result<Value, Response> {
                     }
                     return Ok(Value {
                         value: cmd.values[4].to_string(),
-                        exp: val2,
+                        exp: sec,
                         flags: val1,
                     });
                 }
-                _ => return Err(Response::ClientError),
+                _ => return Err(Response::ClientError("Unsupported Syntax".to_string())),
             }
         }
-        Err(_) => return Err(Response::ClientError),
+        Err(_) => return Err(Response::ClientError("Unsupported Syntax".to_string())),
     }
 }
-fn set_res(cmd: Command) -> String {
+fn set_res(cmd: &Command) -> String {
     match valid_value(&cmd) {
         Ok(val) => {
             let mut ds = DATA_STORE.lock().unwrap();
@@ -100,7 +101,7 @@ fn set_res(cmd: Command) -> String {
     }
 }
 
-fn get_res(cmd: Command) -> String {
+fn get_res(cmd: &Command) -> String {
     if cmd.values.len() == 0 {
         return Response::Error.to_string();
     }
@@ -116,10 +117,10 @@ fn get_res(cmd: Command) -> String {
                 val.value
             );
         }
-        None => Response::NotFound.to_string(),
+        None => Response::ClientError("Key Not Found".to_string()).to_string(),
     }
 }
-fn append_res(cmd: Command) -> String {
+fn append_res(cmd: &Command) -> String {
     match valid_value(&cmd) {
         Ok(val) => {
             let mut ds = DATA_STORE.lock().unwrap();
@@ -131,7 +132,7 @@ fn append_res(cmd: Command) -> String {
         Err(error) => return error.to_string(),
     }
 }
-fn prepend_res(cmd: Command) -> String {
+fn prepend_res(cmd: &Command) -> String {
     match valid_value(&cmd) {
         Ok(val) => {
             let mut ds = DATA_STORE.lock().unwrap();
@@ -144,7 +145,7 @@ fn prepend_res(cmd: Command) -> String {
     }
 }
 
-fn add_res(cmd: Command) -> String {
+fn add_res(cmd: &Command) -> String {
     match valid_value(&cmd) {
         Ok(val) => {
             let mut ds = DATA_STORE.lock().unwrap();
@@ -158,7 +159,7 @@ fn add_res(cmd: Command) -> String {
         Err(error) => return error.to_string(),
     }
 }
-fn delete_res(cmd: Command) -> String {
+fn delete_res(cmd: &Command) -> String {
     if cmd.values.len() == 0 {
         return Response::Error.to_string();
     }
@@ -166,9 +167,9 @@ fn delete_res(cmd: Command) -> String {
     if ds.delete_key(&cmd.values[0]) {
         return Response::Deleted.to_string();
     }
-    return Response::NotFound.to_string();
+    return Response::ClientError("Key Not Found".to_string()).to_string();
 }
-fn replace_res(cmd: Command) -> String {
+fn replace_res(cmd: &Command) -> String {
     match valid_value(&cmd) {
         Ok(val) => {
             let mut ds = DATA_STORE.lock().unwrap();

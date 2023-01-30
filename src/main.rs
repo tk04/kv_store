@@ -1,15 +1,12 @@
 mod command_parser;
 use command_parser::CommandType;
+mod client;
 mod data_store;
 mod server;
-use std::thread;
-// use std::time::Duration;
-mod client;
 
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::sync::Mutex;
-// use std::thread::sleep;
 
 lazy_static! {
     static ref VALUES: HashMap<String, String> = HashMap::new();
