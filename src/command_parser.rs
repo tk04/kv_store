@@ -22,7 +22,6 @@ pub enum CommandType {
 pub enum Response {
     Stored,
     NotStored,
-    // NotFound,
     Error,
     Deleted,
     ClientError(String),
@@ -33,7 +32,6 @@ impl Response {
         match self {
             Response::Stored => "STORED\r\n".to_string(),
             Response::NotStored => "NOT_STORED\r\n".to_string(),
-            // Response::NotFound => "NOT_FOUND\r\n".to_string(),
             Response::Error => "ERROR\r\n".to_string(),
             Response::Deleted => "DELETED\r\n".to_string(),
             Response::Ok => "OK\r\n".to_string(),
@@ -53,7 +51,7 @@ fn try_parse(
         v.push(i.to_string());
     }
     let mut reply = true;
-    if v[v.len() - 1] == "noreply" {
+    if v.len() > 0 && v[v.len() - 1] == "noreply" {
         reply = false;
         v.pop();
     }
@@ -81,7 +79,7 @@ fn try_parse(
 }
 
 pub fn parse_cmd(cmd: &str) -> Result<Command, Response> {
-    let mut command = cmd.trim().split("\r\n");
+    let mut command = cmd.split("\r\n");
     let mut proto = command.next().unwrap().split(" ");
 
     match proto.next() {

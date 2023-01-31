@@ -6,10 +6,6 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-// commmand errors "invalid command", "Invalid key erro", ValueErr (enter key with length of value,
-// if the bytes don't match, throw value_err)
-//
-
 #[derive(Clone, Debug)]
 pub struct Value {
     pub value: String,
@@ -26,7 +22,6 @@ fn parse_value(val: &str) -> Option<Value> {
     if let Some(idx) = val.find(" ") {
         match u32::from_str(&val[0..idx]) {
             Ok(num) => {
-                // let mut flags;
                 let second_idx = val[idx + 1..].find(" ").expect("PARSING ERROR") + idx;
                 match u64::from_str(&val[idx + 1..second_idx + 1]) {
                     Ok(int) => {
