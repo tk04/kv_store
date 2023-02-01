@@ -13,8 +13,7 @@ pub fn listen() {
     let listener = TcpListener::bind("127.0.0.1:6000").unwrap();
 
     for stream in listener.incoming() {
-        // thread::spawn(|| handler(&mut stream.unwrap()));
-        handler(&mut stream.unwrap());
+        thread::spawn(|| handler(&mut stream.unwrap()));
     }
 }
 
@@ -36,7 +35,7 @@ fn split_commands(st: &str) -> Vec<String> {
     let mut command = st.split("\r\n");
     let mut nxt = command.next();
     while nxt.is_some() {
-        let mut proto = nxt.unwrap().split(" ");
+        let mut proto = nxt.unwrap().trim().split(" ");
         match proto.next() {
             Some(val) => match COMMANDS.get(val).copied() {
                 Some(t) => {
@@ -50,7 +49,12 @@ fn split_commands(st: &str) -> Vec<String> {
                     }
                     v.push(s);
                 }
-                None => (),
+                None => {
+                    let string = nxt.unwrap();
+                    if string.len() > 0 && string.as_bytes()[0] != 10 {
+                        v.push(nxt.unwrap().to_string())
+                    }
+                }
             },
             None => (),
         }
