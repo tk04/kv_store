@@ -8,7 +8,7 @@ pub struct Command {
     pub values: Vec<String>,
     pub reply: bool, // flags: HashMap<Flags, String>,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CommandType {
     Set,
     Get,
@@ -19,11 +19,13 @@ pub enum CommandType {
     Delete,
     FlushAll,
 }
+#[derive(Debug)]
 pub enum Response {
     Stored,
     NotStored,
     Error,
     Deleted,
+    NotFound,
     ClientError(String),
     Ok,
 }
@@ -33,6 +35,7 @@ impl Response {
             Response::Stored => "STORED\r\n".to_string(),
             Response::NotStored => "NOT_STORED\r\n".to_string(),
             Response::Error => "ERROR\r\n".to_string(),
+            Response::NotFound => "NOT_FOUND\r\n".to_string(),
             Response::Deleted => "DELETED\r\n".to_string(),
             Response::Ok => "OK\r\n".to_string(),
             Response::ClientError(val) => format!("CLIENT_ERROR {val}\r\n"),

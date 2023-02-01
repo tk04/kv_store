@@ -7,6 +7,7 @@ mod server;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::sync::Mutex;
+use std::thread;
 
 lazy_static! {
     static ref VALUES: HashMap<String, String> = HashMap::new();
@@ -25,7 +26,8 @@ lazy_static! {
     };
 }
 fn main() {
-    // sleep(Duration::from_secs(1));
+    // spawn client threads
     // thread::spawn(|| client::send());
+    // thread::spawn(|| client::client2());
     server::listen();
 }

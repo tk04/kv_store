@@ -193,7 +193,7 @@ impl DataStore {
         self.store.clear();
         self.file.set_len(0).expect("error while handling file");
         self.file
-            .seek(SeekFrom::End(0))
+            .seek(SeekFrom::Start(0))
             .expect("error while handling file");
 
         return true;
